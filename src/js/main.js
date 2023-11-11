@@ -33,13 +33,20 @@ const observer = new IntersectionObserver(onEntry, options);
 
 async function querySubmitHandler(e) {
   e.preventDefault();
+  if (e.target.elements.searchQuery.value.trim() === '') {
+    return Messages.error('Please enter a search query!');
+  }
+  if (e.target.elements.searchQuery.value.trim() === query) {
+    return Messages.warning('Please enter a new search query! Or scroll down');
+  }
   await makeRender();
 }
 function queryChecker() {
-  if (formRef.elements.searchQuery.value !== query) {
+  const newQuery = formRef.elements.searchQuery.value.trim();
+  if (newQuery !== query) {
     page = 1;
     totalPages = 1;
-    query = formRef.elements.searchQuery.value;
+    query = newQuery;
     return true;
   } else {
     page += 1;
@@ -52,17 +59,21 @@ async function makeRender() {
   if (isFirstQuery) {
     galleryRef.innerHTML = '';
   }
+
   if (page > totalPages) {
     Messages.warning('No more images');
     return;
   }
-  const hits = await fetchImages(query, page)
-    .then(data => {
-      totalHits = data.totalHits;
-      totalPages = Math.ceil(totalHits / 40);
-      return data.hits;
-    })
-    .catch(error => Messages.error(error.message));
+  let hits;
+  try {
+    const data = await fetchImages(query, page);
+    hits = data.hits;
+    totalHits = data.totalHits;
+    totalPages = Math.ceil(totalHits / 40);
+  } catch (error) {
+    Messages.error(error.message);
+  }
+
   if (!hits.length) {
     Messages.error(
       'Sorry, there are no images matching your search query. Please try again.'
